@@ -50,6 +50,8 @@ To Do
 - If modlib_webapp is declared as a behavior, it breaks the wrapping that's
   done by the webapp include.
 
+- Remove mochiweb util module dependencies, lazy!
+
 inets Wish List
 ===============
 
