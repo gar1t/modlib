@@ -6,7 +6,7 @@
 
 -export([httpd_config/1]).
 
--export([headers/1, parse_qs/1, parse_post/1]).
+-export([headers/1, parse_qs/1, parse_body/1]).
 
 -define(DEFAULT_SERVER_ROOT, ".").
 -define(DEFAULT_DOCUMENT_ROOT, ".").
@@ -62,16 +62,16 @@ parse_qs(#mod{data=Data, request_uri=Uri}) ->
 %% Returns {error, content_type} if the content type is not form
 %% urlencoded.
 %%
-%% @spec parse_post(Info) -> {ok, proplist()} | {error, Reason}
+%% @spec parse_body(Info) -> {ok, proplist()} | {error, Reason}
 %% Reason = content_type
 %% @end
 %%--------------------------------------------------------------------
 
-parse_post(#mod{parsed_header=Header, entity_body=Body}) ->
+parse_body(#mod{parsed_header=Header, entity_body=Body}) ->
     case proplists:get_value("content-type", Header) of
-	"application/x-www-form-urlencoded"++_ ->
-	    {ok, modlib_util:parse_qs(Body)};
-	 _ -> {error, content_type}
+        "application/x-www-form-urlencoded"++_ ->
+            {ok, modlib_util:parse_qs(Body)};
+        _ -> {error, content_type}
     end.
 
 %%--------------------------------------------------------------------

@@ -36,7 +36,7 @@ query_params(Info) ->
     end.
 
 post_params(Info) ->
-    case modlib:parse_post(Info) of
+    case modlib:parse_body(Info) of
         {error, content_type} -> [];
         {ok, []} -> [];
         {ok, Params} ->
