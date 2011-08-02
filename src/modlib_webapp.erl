@@ -88,6 +88,10 @@ do(#mod{method=Method,
                     ReqInfo = Info#mod{data=[{'_split_uri', Split}|Data]},
                     try
                         case Mod:request(Method, UnquotedPath, ReqInfo) of
+                            {Code, Headers, Resp} when is_integer(Code) ->
+                                proceed(Code, Headers, Resp, Data);
+                            {Code, Resp} when is_integer(Code) ->
+                                proceed(Code, [], Resp, Data);
                             {ok, Resp} ->
                                 proceed(200, [], Resp, Data);
                             {redirect, Url} ->
