@@ -21,9 +21,9 @@ optional(Name, Params, Default, Options) ->
     end.
 
 convert(Val, Options, Name) ->
-    case convert_type(Val, Options) of
+    case apply_conversion(Val, Options) of
         {ok, Converted} ->
-            case check_range(Converted, Options) of
+            case apply_range(Converted, Options) of
                 {ok, InRange} -> InRange;
                 {error, Err} ->
                     throw({badreq, [Name, " is out of range (", Err, ")"]})
@@ -32,32 +32,60 @@ convert(Val, Options, Name) ->
             throw({badreq, [Name, " is invalid (", Err, ")"]})
     end.
 
-convert_type(Val, Options) ->
-    case proplists:get_bool(int, Options) of
-        true -> convert_integer(Val);
-        false -> {ok, Val}
-    end.
-
-check_range(Val, Options) ->
-    case proplists:get_bool(positive, Options) of
-        true -> check_positive(Val);
-        false -> {ok, Val}
-    end.
-
-check_positive(Num) when is_number(Num) ->
-    case Num > 0 of
-        true -> {ok, Num};
-        false -> {error, "must be > 0"}
-    end;
-check_positive(_Num) ->
-    {error, "not a number"}.
-
-convert_integer(Val) ->    
+apply_conversion(Val, []) -> {ok, Val};
+apply_conversion(Val, [int|_]) when is_list(Val) ->
     try list_to_integer(Val) of
         Int -> {ok, Int}
     catch
         error:badarg -> {error, "not an integer"}
-    end.
+    end;
+apply_conversion(Val, [float|_]) when is_list(Val) ->
+    try list_to_float(Val) of
+        Float -> {ok, Float}
+    catch
+        error:badarg ->
+            try list_to_integer(Val) of
+                Int -> {ok, float(Int)}
+            catch
+                error:badarg ->
+                    {error, "not an float"}
+            end
+    end;
+apply_conversion(Val, [bool|_]) when is_list(Val) ->
+    case string:to_lower(Val) of
+        "" -> {ok, false};
+        "0" -> {ok, false};
+        "false" -> {ok, false};
+        "no" -> {ok, false};
+        _ -> {ok, true}
+    end;
+apply_conversion(Val, [_|Rest]) ->
+    apply_conversion(Val, Rest).
+
+apply_range(Val, []) -> {ok, Val};
+apply_range(RHS, [{Op, LHS}|Rest]) ->
+    case apply_op(Op, RHS, LHS) of
+        true -> apply_range(RHS, Rest);
+        false -> {error, io_lib:format("must be ~s ~p", [Op, LHS])}
+    end;
+apply_range(Val, [_|Rest]) ->
+    apply_range(Val, Rest).
+
+apply_op('<', L, R) -> L < R;
+apply_op('<=', L, R) -> L =< R;
+apply_op('=<', L, R) -> L =< R;
+apply_op('>', L, R) -> L > R;
+apply_op('>=', L, R) -> L >= R;
+apply_op('/=', L, R) -> L /= R;
+apply_op('<>', L, R) -> L /= R;
+apply_op('=', L, R) -> L == R;
+apply_op('==', L, R) -> L == R;
+apply_op(in, Val, Options) -> lists:member(Val, Options);
+apply_op('or', L, Ops) ->
+    lists:any(fun({Op, R}) -> apply_op(Op, L, R);
+                 (Other) -> exit({invalid_operator, Other})
+              end, Ops);
+apply_op(Other, _L, _R) -> exit({invalid_operator, Other}).
 
 eval_default({M, F}) -> erlang:apply(M, F, []);
 eval_default({M, F, A}) -> erlang:apply(M, F, A);
