@@ -1,23 +1,31 @@
-.PHONY: compile
-compile:
+compile: deps
 	./rebar compile
 
-.PHONY: clean
+quick:
+	./rebar compile skip_deps=true
+
+deps:
+	./rebar get-deps
+
+refresh-deps:
+	./rebar delete-deps
+	./rebar get-deps
+
 clean:
 	./rebar clean
 
-TESTS=""
 .PHONY: test
+
+DEPS=$(notdir $(wildcard deps/*))
+
+TESTS=""
 test:
 ifeq ($(TESTS), "")
-	./rebar eunit
+	./rebar -j1 eunit skip_deps=true
 else
-	./rebar eunit suite=$(TESTS)
+	./rebar -j1 eunit suite=$(TESTS) skip_deps=true
 endif
 
 .PHONY: doc
 doc:
 	./rebar doc
-
-shell: compile
-	erl -pa .eunit -pa ebin -s modlib_reloader
