@@ -133,6 +133,8 @@ The request method looks like this::
       Content = iolist() | {Type, iolist()}
       Type = text | html | xml | json
       Location = string()
+      Code = integer()
+      Headers = [{string(), string()}]
   @end
 
 Refer to ``include/httpd.hrl`` for details on the ``mod`` record (typically not
@@ -212,6 +214,11 @@ To Do
   done by the webapp include.
 
 - Remove mochiweb util module dependencies, lazy!
+
+- Support for easy direct-to-socket responses (i.e. already_sent pattern)
+
+- How is keep-alive / long running connections supported?
+
 
 inets Wish List
 ===============
