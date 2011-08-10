@@ -35,10 +35,104 @@ A simple hello world app::
   start(Port) ->
       modlib:start([{port, Port}, {modules, [?MODULE]}]).
 
-  wrequest("GET", _Path, _Info) ->
+  request("GET", _Path, _Info) ->
       {ok, {html, "Hello modlib!"}};
   request(_Method, _Path, _Info) ->
       {error, "Bad Request"}.
+
+Webapp Cheat Sheet
+==================
+
+A "web app" is an httpd mod that implements `request/3`, which is called with
+the HTTP request details and returns the HTTP response.
+
+The only "magic" here is that the required include of webapp.hrl uses a parse
+transform to wrap the rather complex modlib API.
+
+The request method looks like this::
+
+  @spec
+  request(Method, Path, Info) -> Response
+      Method = "GET" | "POST" | "PUT" | "DELETE" | "HEAD"
+      Path = string()
+      Info = #mod{}
+      Response = {ok, Content} |
+                 {error, Content} |
+                 {not_found, Content} |
+                 {redirect, Location} |
+                 {Code, Content} |
+                 {Code, Headers, Content} |
+                 not_handled
+      Content = iolist() | {Type, iolist()}
+      Type = text | html | xml | json
+      Location = string()
+  @end
+
+Refer to `include/httpd.hrl` for details on the `mod` record (typically not
+used, but needed for some cases).
+
+The Path does not contain query string or reference elements. The original
+request URL is in the `request_url` element of Info#mod.
+
+Use `modlib:parse_qs(Info)` to return a proplist of query string params.
+
+Use `modlib:parse_body(Info)` to return a proplist of form-urlencoded body
+params. (Note that the content type in the request headers must be
+"application/x-www-form-urlencoded" otherwise parse_body/1 will return
+`{error, content_type}`.)
+
+Return `not_handled` from `request/3` to let httpd continue processing the
+request with downstream modules.
+
+modlib applications can be started using `modlib:start/1` or (more typically)
+by starting the modlib OTP application with the appropriate config.
+
+Here's a sample modlib config for a non-SSL app::
+
+  {modlib,
+   [{servers,
+     [{8080,
+       [{server_root, "/some/dir"},
+        {document_root, "/some/dir/htdocs"},
+        {modules, [my_modlib_webapp, mod_get]},
+        {mime_types, [{"css", "text/css"},
+                      {"js", "text/javascript"},
+                      {"gif", "image/gif"},
+                      {"jpeg", "image/jpeg"},
+                      {"png", "image/png"}]}]}]}]}
+
+Here's a sample modlib config for an SSL enabled app (also includes the use of
+mod_auth for protecting a directory with basic auth)::
+
+  {modlib,
+   [{servers,
+     [{443,
+       [{server_root, "/some/dir"},
+        {document_root, "/some/dir/htdocs"},
+        {socket_type, essl},
+        {ssl_certificate_file, "/some/dir/server.crt"},
+        {ssl_certificate_key_file, "/some/dir/server.key"},
+        {ssl_ca_certificate_file, "/some/dir/ca.crt"},
+        {modules,[mod_auth, my_modlib_webapp, mod_get2]},
+        {directory, {"/protected",
+                    [{auth_type, plain},
+                     {auth_user_file, "/some/dir/users"},
+                     {auth_group_file, "/some/dir/groups"},
+                     {auth_name, "My Modlib Webapp"},
+                     {require_group, ["users"]}]}},
+        {mime_types,[{"css", "text/css"},
+                     {"js", "text/javascript"},
+                     {"gif", "image/gif"},
+                     {"jpeg", "image/jpeg"},
+                     {"png", "image/png"}]}]}]}]}
+
+The configuration proplist for the server port is identical to the httpd
+configration documented in http://www.erlang.org/doc/man/httpd.html.
+
+`mod_get2` is a copy of `mod_get` with support for etags.
+
+For template support, use the excellent Django language implementation at
+https://github.com/evanmiller/erlydtl.
 
 To Do
 =====
