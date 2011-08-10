@@ -10,7 +10,7 @@ Motivation
 
 The standard Erlang language environment ships with a powerful set of network
 tools in the 'inets' OTP application. This includes a full featured HTTP server
-in the `httpd module`_.
+in the ``httpd module``_.
 
 .. _httpd module: http://www.erlang.org/doc/man/httpd.html
 
@@ -40,10 +40,77 @@ A simple hello world app::
   request(_Method, _Path, _Info) ->
       {error, "Bad Request"}.
 
+A more complex app (illustrates more modlib features and how Erlang can be used
+to elegantly structure your HTTP handlers)::
+
+  -module(echo_http).
+
+  -include_lib("modlib/include/webapp.hrl").
+
+  -export([start/1, request/3]).
+
+  -define(TITLE, "Echo").
+
+  start(Port) ->
+      modlib:start([{port, Port}, {modules, [?MODULE]}]).
+
+  request(Method, Path, Info) ->
+      {ok,
+       {html,
+	["<html>",
+	 "<head><title>", ?TITLE, "</title></head>",
+	 "<body>",
+	 request_line(Method, Path),
+	 query_params(Info),
+	 post_params(Info),
+	 headers(Info),
+	 "</body>",
+	 "</html>"]
+       }}.
+
+  request_line(Method, Path) ->
+      ["<p>", Method, " ", Path, "</p>"].
+
+  query_params(Info) ->
+      case modlib:parse_qs(Info) of
+	  [] -> [];
+	  Params ->
+	      ["<h4>Query Params</h4>",
+	       [["<div><b>", Name, "</b>: ", Value, "</div>"]
+		|| {Name, Value} <- Params]]
+      end.
+
+  post_params(Info) ->
+      case modlib:parse_body(Info) of
+	  {error, content_type} -> [];
+	  {ok, []} -> [];
+	  {ok, Params} ->
+	      ["<h4>Post Params</h4>",
+	       [["<div><b>", Name, "</b>: ", Value, "</div>"]
+		|| {Name, Value} <- Params]]
+      end.
+
+  headers(Info) ->
+      ["<h4>Headers</h4>",
+       [["<div><b>", Name, "</b>: ", Value, "</div>"]
+	|| {Name, Value} <- modlib:headers(Info)]].
+
+Important notes:
+
+ - You must include "webapp.hr" in your webapp modules (see above)
+
+ - modlib doesn't come with template support - but erlydtl is recommended as
+   it's outstanding
+
+ - modlib wraps the httpd mod interface - while you don't need to know httpd
+   inside and out, it won't hurt to read the docs
+
+ - Refer to "Webapp Cheat Sheet" below for more details
+
 Webapp Cheat Sheet
 ==================
 
-A "web app" is an httpd mod that implements `request/3`, which is called with
+A "web app" is an httpd mod that implements ``request/3``, which is called with
 the HTTP request details and returns the HTTP response.
 
 The only "magic" here is that the required include of webapp.hrl uses a parse
@@ -68,23 +135,23 @@ The request method looks like this::
       Location = string()
   @end
 
-Refer to `include/httpd.hrl` for details on the `mod` record (typically not
+Refer to ``include/httpd.hrl`` for details on the ``mod`` record (typically not
 used, but needed for some cases).
 
 The Path does not contain query string or reference elements. The original
-request URL is in the `request_url` element of Info#mod.
+request URL is in the ``request_url`` element of Info#mod.
 
-Use `modlib:parse_qs(Info)` to return a proplist of query string params.
+Use ``modlib:parse_qs(Info)`` to return a proplist of query string params.
 
-Use `modlib:parse_body(Info)` to return a proplist of form-urlencoded body
+Use ``modlib:parse_body(Info)`` to return a proplist of form-urlencoded body
 params. (Note that the content type in the request headers must be
 "application/x-www-form-urlencoded" otherwise parse_body/1 will return
-`{error, content_type}`.)
+``{error, content_type}``.)
 
-Return `not_handled` from `request/3` to let httpd continue processing the
+Return ``not_handled`` from ``request/3`` to let httpd continue processing the
 request with downstream modules.
 
-modlib applications can be started using `modlib:start/1` or (more typically)
+modlib applications can be started using ``modlib:start/1`` or (more typically)
 by starting the modlib OTP application with the appropriate config.
 
 Here's a sample modlib config for a non-SSL app::
@@ -129,7 +196,7 @@ mod_auth for protecting a directory with basic auth)::
 The configuration proplist for the server port is identical to the httpd
 configration documented in http://www.erlang.org/doc/man/httpd.html.
 
-`mod_get2` is a copy of `mod_get` with support for etags.
+``mod_get2`` is a copy of ``mod_get`` with support for etags.
 
 For template support, use the excellent Django language implementation at
 https://github.com/evanmiller/erlydtl.
