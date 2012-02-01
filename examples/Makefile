@@ -1,8 +1,8 @@
 compile:
-	cd .. && make compile
+	erlc -I ../include -pa ../ebin *.erl
 
 clean:
-	cd .. && make clean
+	rm *.beam
 
-test:
-	cd .. && make test
+shell:
+	erl -pa ../ebin

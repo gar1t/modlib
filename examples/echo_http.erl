@@ -1,17 +1,18 @@
 -module(echo_http).
 
--include_lib("modlib/include/webapp.hrl").
+-include("webapp.hrl").
 
 -export([start/1, request/3]).
 
 -define(TITLE, "Echo").
 
 start(Port) ->
+    application:start(inets),
     modlib:start([{port, Port}, {modules, [?MODULE]}]).
 
 request(Method, Path, Info) ->
-    {ok, 
-     {html, 
+    {ok,
+     {html,
       ["<html>",
        "<head><title>", ?TITLE, "</title></head>",
        "<body>",
@@ -47,5 +48,5 @@ post_params(Info) ->
 
 headers(Info) ->
     ["<h4>Headers</h4>",
-     [["<div><b>", Name, "</b>: ", Value, "</div>"] 
+     [["<div><b>", Name, "</b>: ", Value, "</div>"]
       || {Name, Value} <- modlib:headers(Info)]].

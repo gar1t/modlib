@@ -1,6 +1,6 @@
 -module(hello_http).
 
--include_lib("modlib/include/webapp.hrl").
+-include("webapp.hrl").
 
 -export([start/1, request/3]).
 
