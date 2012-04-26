@@ -143,7 +143,7 @@ response(Code, H0, {Type, Body}) when is_list(Body) ->
     {response, [{code, Code}|Headers], Body};
 response(Code, Headers, empty) ->
     {response, [{code, Code}|Headers], nobody};
-response(Code, Headers, Body) when is_list(Body) ->
+response(Code, Headers, Body) ->
     response(Code, Headers, {text, Body}).
 
 body_length(Body) when is_list(Body) ->
@@ -153,4 +153,4 @@ mime_type(text)  -> "text/plain";
 mime_type(html)  -> "text/html";
 mime_type(xml)   -> "text/xml";
 mime_type(json)  -> "application/json";
-mime_type(Other) -> erlang:error({unsupported_type, Other}).
+mime_type(Type)  -> Type.
