@@ -136,7 +136,7 @@ proceed(Code, Headers, Body, Data) ->
     {proceed, NewData}.
 
 response(Code, H0, {Type, Body}) when is_binary(Body) ->
-    response(Code, H0, {Type, binary_to_list(Body)});
+    response(Code, H0, {Type, [Body]});
 response(Code, H0, {Type, Body}) when is_list(Body) ->
     Headers = [{content_type, mime_type(Type)},
                {content_length, body_length(Body)}|H0],
