@@ -6,7 +6,7 @@
 
 -export([httpd_config/1]).
 
--export([headers/1, parse_qs/1, parse_body/1]).
+-export([headers/1, parse_qs/1, parse_body/1, body/1]).
 
 -define(DEFAULT_SERVER_ROOT, ".").
 -define(DEFAULT_DOCUMENT_ROOT, ".").
@@ -73,6 +73,14 @@ parse_body(#mod{parsed_header=Header, entity_body=Body}) ->
             {ok, modlib_util:parse_qs(Body)};
         _ -> {error, content_type}
     end.
+
+%%--------------------------------------------------------------------
+%% @doc Returns the request unmodified body.
+%% @spec body(Info) -> binary()
+%% @end
+%%--------------------------------------------------------------------
+
+body(#mod{entity_body=Body}) -> Body.
 
 %%--------------------------------------------------------------------
 %% @doc Returns a validated inets httpd config for a modlib config.
@@ -153,7 +161,7 @@ wrap_webapps(Mods) ->
 %%--------------------------------------------------------------------
 
 is_webapp(Mod) ->
-    Behaviors = [Value || {Name, Value} <- Mod:module_info(attributes), 
+    Behaviors = [Value || {Name, Value} <- Mod:module_info(attributes),
                           Name == behavior orelse Name == behaviour],
     lists:any(fun(M) -> M == [modlib_webapp] end, Behaviors).
 
