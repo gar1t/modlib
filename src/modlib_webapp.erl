@@ -143,7 +143,7 @@ response(Code, H0, {Type, Body}) when is_list(Body) ->
     {response, [{code, Code}|Headers], Body};
 response(Code, Headers, empty) ->
     {response, [{code, Code}|Headers], nobody};
-response(Code, Headers, Body) ->
+response(Code, Headers, Body) when is_list(Body) ->
     response(Code, Headers, {text, Body}).
 
 body_length(Body) when is_list(Body) ->
