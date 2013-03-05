@@ -6,7 +6,13 @@
 
 -export([httpd_config/1]).
 
--export([headers/1, parse_qs/1, parse_body/1, body/1]).
+-export([parse_qs/1,
+	 parse_body/1,
+	 remote_user/1,
+	 body/1,
+	 headers/1,
+	 header/2,
+	 header/3]).
 
 -define(DEFAULT_SERVER_ROOT, ".").
 -define(DEFAULT_DOCUMENT_ROOT, ".").
@@ -33,14 +39,6 @@ start(ModlibConfig) ->
 services() ->
     [{httpd, ChildPid} || {_, ChildPid, _, _}
                               <- supervisor:which_children(modlib_sup)].
-
-%%--------------------------------------------------------------------
-%% @doc Returns parsed headers.
-%% @spec headers(Info) -> [{Name, Value}]
-%% @end
-%%--------------------------------------------------------------------
-
-headers(#mod{parsed_header=H}) -> H.
 
 %%--------------------------------------------------------------------
 %% @doc Returns a propery list of parsed query string params.
@@ -73,14 +71,6 @@ parse_body(#mod{parsed_header=Header, entity_body=Body}) ->
             {ok, modlib_util:parse_qs(Body)};
         _ -> {error, content_type}
     end.
-
-%%--------------------------------------------------------------------
-%% @doc Returns the request unmodified body.
-%% @spec body(Info) -> binary()
-%% @end
-%%--------------------------------------------------------------------
-
-body(#mod{entity_body=Body}) -> Body.
 
 %%--------------------------------------------------------------------
 %% @doc Returns a validated inets httpd config for a modlib config.
@@ -172,8 +162,6 @@ is_webapp(Mod) ->
 %%--------------------------------------------------------------------
 
 apply_httpd_config_defaults(HttpdConfig) ->
-    %% TODO: ugh, I hate the way httpd needs all this junk? Is there a
-    %% way to clean this up?
     ServerRoot = proplists:get_value(server_root, HttpdConfig,
                                      ?DEFAULT_SERVER_ROOT),
     DocRoot = proplists:get_value(document_root, HttpdConfig,
@@ -200,3 +188,68 @@ apply_config_defaults([{Name, DefaultVal}|T], Config) ->
         _ ->
             apply_config_defaults(T, Config)
     end.
+
+%%--------------------------------------------------------------------
+%% @doc Raises an error if Path is not a valid directory.
+%% @spec validate_dir(string()) -> ok
+%% @end
+%%--------------------------------------------------------------------
+
+validate_dir(Path) ->
+    case filelib:is_dir(Path) of
+        true -> ok;
+        false -> erlang:error({bad_dir, Path})
+    end.
+
+%%--------------------------------------------------------------------
+%% @doc Return remote user associated with a request.
+%%
+%% Returns undefined if there is not remote user.
+%%
+%% @spec remote_user(Info) -> string() | undefined
+%% @end
+%%--------------------------------------------------------------------
+
+remote_user(#mod{data=Data}) ->
+    proplists:get_value(remote_user, Data).
+
+
+%%--------------------------------------------------------------------
+%% @doc Returns the request unmodified body.
+%% @spec body(Info) -> binary()
+%% @end
+%%--------------------------------------------------------------------
+
+body(#mod{entity_body=Body}) -> Body.
+
+%%--------------------------------------------------------------------
+%% @doc Returns parsed headers.
+%% @spec headers(Info) -> [{Name, Value}]
+%% @end
+%%--------------------------------------------------------------------
+
+headers(#mod{parsed_header=H}) -> H.
+
+%%--------------------------------------------------------------------
+%% @doc Return a header value.
+%%
+%% Returns undefined if the named value doesn't exist.
+%%
+%% @spec header(Name, Info) -> string() | undefined
+%% @end
+%%--------------------------------------------------------------------
+
+header(Name, #mod{parsed_header=Hs}) ->
+    proplists:get_value(Name, Hs).
+
+%%--------------------------------------------------------------------
+%% @doc Return a header value.
+%%
+%% Returns Default if the named value doesn't exist.
+%%
+%% @spec header(Name, Info, Default) -> string() | Default
+%% @end
+%%--------------------------------------------------------------------
+
+header(Name, #mod{parsed_header=Hs}, Default) ->
+    proplists:get_value(Name, Hs, Default).
